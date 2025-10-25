@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Music Search</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+</head>
+<body>
+
+    <h1>YouTube Music Search</h1>
+
+    <div class="flash-messages" id="flash-container"></div>
+
+
+    <form class="search-form" method="POST" id="searchForm">
+        <input type="text" name="query" id="queryInput" placeholder="Enter artist or song name...">
+
+        <button type="submit">Search</button>
+
+        <div class="g-recaptcha"
+             data-sitekey="{{ recaptcha_site_key }}"
+             data-callback="onSubmit"
+             data-size="invisible">
+        </div>
+
+    </form>
+
+    <div id="loader" class="loader" style="display: none;"></div>
+
+    <div class="thumbnail-grid" id="results-grid"></div>
+
+
+    <script>
+        const searchForm = document.getElementById('searchForm');
+        const queryInput = document.getElementById('queryInput');
+        const resultsGrid = document.getElementById('results-grid');
+        const loader = document.getElementById('loader');
+        const flashContainer = document.getElementById('flash-container');
+
+        // This function is called by reCAPTCHA *after* it has a token.
+        function onSubmit(token) {
+            performSearch(token);
+        }
+
+        // Listen for the form's submit event
+        searchForm.addEventListener("submit", function(event) {
+            // Stop the form from submitting normally
+            event.preventDefault();
+
+            // Clear old errors and results
+            flashContainer.innerHTML = '';
+            resultsGrid.innerHTML = '';
+
+            //
+            // *** THIS IS THE FIX ***
+            // Check if the grecaptcha object exists. If not, Shields blocked it.
+            //
+            if (typeof grecaptcha === 'undefined') {
+                showError("reCAPTCHA failed to load. Please disable your browser's ad/tracker blocker (like Brave Shields) for this site and reload the page.");
+                return; // Stop here
+            }
+            //
+            // *** END OF FIX ***
+            //
+
+            var response = grecaptcha.getResponse();
+            if (response.length === 0) {
+                // No token yet, so run the invisible reCAPTCHA
+                loader.style.display = 'block'; // Show loader
+                grecaptcha.execute();
+            } else {
+                // We already have a token, just submit
+                performSearch(response);
+            }
+        });
+
+        // This function performs the background search
+        async function performSearch(token) {
+            const query = queryInput.value;
+            loader.style.display = 'block'; // Show loader
+
+            try {
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        'query': query,
+                        'g-recaptcha-response': token
+                    })
+                });
+
+                // Reset reCAPTCHA so it can be used again
+                grecaptcha.reset();
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Search failed.');
+                }
+
+                const results = await response.json();
+                displayResults(results);
+
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                loader.style.display = 'none'; // Hide loader
+            }
+        }
+
+        // This function builds the HTML for the results
+        function displayResults(results) {
+            resultsGrid.innerHTML = ''; // Clear grid
+            if (results.length === 0) {
+                resultsGrid.innerHTML = '<p style="text-align: center;">No results found.</p>';
+                return;
+            }
+
+            results.forEach(video => {
+                const card = `
+                    <div class="video-card">
+                        <a href="${video.url}" target="youtube_player">
+                            <img src="${video.thumbnail_url}" alt="${video.title}">
+                            <p class="video-title">${video.title}</p>
+                        </a>
+                        <p class="video-views">${video.views_formatted} views</p>
+                    </div>
+                `;
+                resultsGrid.innerHTML += card;
+            });
+        }
+
+        // This function displays errors
+        function showError(message) {
+            flashContainer.innerHTML = `<div class="flash-error">${message}</div>`;
+        }
+    </script>
+
+</body>
+</html>
