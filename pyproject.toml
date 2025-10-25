@@ -1,23 +1,19 @@
-[project]
+[tool.poetry]
 name = "yt-music-discovery"
 version = "0.1.0"
 description = ""
-authors = [
-    {name = "Jaime Rodriguez",email = "hi.i.am.jaime@gmail.com"}
-]
+authors = ["Jaime Rodriguez <hi.i.am.jaime@gmail.com>"]
 readme = "README.md"
-requires-python = ">=3.12"
-dependencies = [
-    "google-api-python-client (>=2.185.0,<3.0.0)",
-    "python-dotenv (>=1.1.1,<2.0.0)",
-    "flask (>=3.1.2,<4.0.0)",
-    "flask-limiter (>=4.0.0,<5.0.0)",
-    "requests (>=2.32.5,<3.0.0)",
-    "gunicorn (>=23.0.0,<24.0.0)"
-]
-
-[tool.poetry]
 packages = [{include = "yt_music_discovery", from = "src"}]
+
+[tool.poetry.dependencies]
+python = ">=3.12"
+google-api-python-client = ">=2.185.0,<3.0.0"
+python-dotenv = ">=1.1.1,<2.0.0"
+flask = ">=3.1.2,<4.0.0"
+flask-limiter = ">=4.0.0,<5.0.0"
+requests = ">=2.32.5,<3.0.0"
+gunicorn = ">=23.0.0,<24.0.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
